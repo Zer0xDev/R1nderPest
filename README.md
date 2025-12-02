@@ -25,8 +25,10 @@
 
 ### **Prerequisites**
 1. **iTunes** installed ([Download here](https://support.apple.com/en-us/106372))
-2. USB cable for your device
-3. Windows 10/11 (macOS & Linux versions coming soon)
+2. **Python** installed ([Download here](https://www.python.org/downloads/)) DURING INSTALLATION, BE SURE TO CHECK THE BOX "add python to path"
+3. **pymobiledevice3**. Run In the command line, type pip install pymobiledevice3
+4. USB cable for your device
+5. Windows 10/11 (macOS & Linux versions coming soon)
 
 ### **Installation**
 1. Download the latest release from [Releases](../../releases)
