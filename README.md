@@ -25,7 +25,7 @@
 
 ### **Prerequisites**
 1. **iTunes** installed ([Download here](https://support.apple.com/en-us/106372))
-2. **Visual C++ Build Tools** ([Download here](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/))
+2. **Visual C++ Build Tools** ([Download here](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/)) ([guide](https://stackoverflow.com/questions/64261546/how-to-solve-error-microsoft-visual-c-14-0-or-greater-is-required-when-inst))
 3. **Python** installed ([Download here](https://www.python.org/downloads/)) DURING INSTALLATION, BE SURE TO CHECK THE BOX "add python to path"
 4. **pymobiledevice3**. Run In the command line, type pip install pymobiledevice3
 5. USB cable for your device
