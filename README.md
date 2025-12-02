@@ -38,3 +38,8 @@
 **ZeroxDev**
 **Glidd4**
 **Rust505**
+
+## **🙏 Support**
+
+https://buymeacoffee.com/rust505 -- Help for developers
+https://t.me/r1nderpest -- Help with the program
