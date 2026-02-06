@@ -32,20 +32,25 @@ from collections import Counter
 import getpass
 from art import text2art
 import requests
+from pathlib import Path
+from typing import Optional, List, Tuple
+from pymobiledevice3.services.os_trace import OsTraceService
+from pymobiledevice3.lockdown import create_using_usbmux
+import tempfile
 
 base_dir = os.path.dirname(__file__)
 
 ctypes.windll.shcore.SetProcessDpiAwareness(0)
 
-version = 2.1
+version = 2.2
 
 animation = False
 onlyFindGuid = False
 
 print(text2art("R1nderPest"))
-print("==> Version 2.1 Release <==")
+print("==> Version 2.2 Release <==")
 print("--------------------------------------------------")
-print("\n* Developed by ZeroxDev")
+print("\n* Developed by ZeroxDev, Rust")
 base_dir = os.path.dirname(__file__)
 
 
@@ -67,6 +72,11 @@ class Ui_MainWindow(object):
         self.attempt_count = 0
         self.max_attempts = 15
         self.global_GUID = ""
+        self.CREATE_NO_WINDOW = 0x08000000
+        self.POST_CONNECT_DELAY = 12
+        self.MIN_ARCHIVE_SIZE = 10_000_000
+        self.GUID_REGEX = re.compile(rb'[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}')
+        self.BLDB_PATTERNS_UPPER = [b"BLDATABASEMANAGER.SQLITE", b"BLDATABASEMANAGER", b"BLDATABASE"]
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1087, 630)
@@ -443,6 +453,192 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def run_short_command(self, cmd: List[str], timeout: Optional[int] = None) -> Tuple[int, str, str]:
+        try:
+            env = os.environ.copy()
+            bin_dir = str(Path(__file__).parent / "bin")
+            env["PATH"] = bin_dir + os.pathsep + env["PATH"]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                creationflags=self.CREATE_NO_WINDOW,
+                env=env
+            )
+            return result.returncode, result.stdout.strip(), result.stderr.strip()
+        except subprocess.TimeoutExpired:
+            return 124, "", "Command timed out"
+        except Exception as e:
+            return 1, "", str(e)
+
+
+    def find_binary(self, name: str) -> Optional[str]:
+        bin_dir = Path(__file__).parent / "bin"
+        path = bin_dir / name
+        if path.is_file():
+            return str(path)
+        return shutil.which(name)
+
+
+    def ideviceinfo_cmd(self, *args) -> List[str]:
+        exe = "C:/R1nderpest/libimobiledevice/ideviceinfo.exe"
+        return [exe, *args] if exe else ["ideviceinfo.exe", *args]
+
+
+    def idevicediagnostics_cmd(self, *args) -> List[str]:
+        exe = "C:/R1nderpest/libimobiledevice/idevicediagnostics.exe"
+        return [exe, *args] if exe else ["idevicediagnostics.exe", *args]
+
+
+    def get_device_info(self) -> Optional[dict]:
+        info = {}
+        keys = ["DeviceName", "ProductType", "ProductVersion", "SerialNumber", "UniqueDeviceID"]
+        for key in keys:
+            code, out, _ = self.run_short_command(self.ideviceinfo_cmd("-k", key), timeout=10)
+            if code == 0 and out.strip():
+                info[key] = out.strip()
+        return info or None
+
+
+    def restart_device(self) -> bool:
+        self.listWidget.addItem("[*] Rebooting device...")
+        code, _, _ = self.run_short_command(self.idevicediagnostics_cmd("restart"), timeout=30)
+        return code == 0
+
+
+    def wait_for_device(self, timeout: int = 65) -> bool:
+        start = time.time()
+        while time.time() - start < timeout:
+            code, out, _ = self.run_short_command(self.ideviceinfo_cmd(), timeout=10)
+            if code == 0 and "ERROR:" not in out and "No device found" not in out:
+                udid_code, udid_out, _ = self.run_short_command(self.ideviceinfo_cmd("-k", "UniqueDeviceID"), timeout=10)
+                if udid_code == 0 and udid_out.strip():
+                    self.listWidget.addItem("[*] Device connected!")
+                    time.sleep(self.POST_CONNECT_DELAY)
+                    return True
+            time.sleep(4)
+        self.listWidget.addItem("[*] Device did not reconnected!")
+        return False
+
+
+    def collect_syslog_archive(self, archive_path: Path) -> bool:
+        self.listWidget.addItem("[*] Collecting device logs ...")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_archive = Path(tmpdir) / "syslog.logarchive"
+            try:
+                with create_using_usbmux() as lockdown:
+                    with OsTraceService(lockdown) as os_trace:
+                        os_trace.collect(out=str(log_archive), size_limit=12000, age_limit=3600)
+                if not log_archive.exists():
+                    return False
+                archive_path.mkdir(parents=True, exist_ok=True)
+                if log_archive.is_file():
+                    shutil.copy2(log_archive, archive_path / "syslog.logarchive")
+                elif log_archive.is_dir():
+                    for item in log_archive.rglob("*"):
+                        if item.is_file():
+                            rel = item.relative_to(log_archive)
+                            dst = archive_path / rel
+                            dst.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(item, dst)
+                total_size = sum(f.stat().st_size for f in archive_path.rglob("*") if f.is_file())
+                return total_size >= self.MIN_ARCHIVE_SIZE
+            except Exception as e:
+                self.listWidget.addItem(f"[*] Log collection failed! {e}")
+                return False
+
+
+    def extract_guid_from_archive(self, archive_path: Path) -> Optional[str]:
+        exe = "C:/R1nderpest/dependencies/unifiedlog_iterator.exe"
+        cmd = [exe, "--mode", "log-archive", "--input", str(archive_path), "--format", "jsonl"]
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            text=False,
+            bufsize=4 * 1024 * 1024,
+            startupinfo=startupinfo,
+            creationflags=self.CREATE_NO_WINDOW
+        )
+
+        buf = bytearray()
+        scan_pos = 0
+        lines_scanned = 0
+
+        try:
+            while proc.poll() is None:
+                chunk = proc.stdout.read(4 * 1024 * 1024)
+                if not chunk:
+                    break
+                buf.extend(chunk)
+                while True:
+                    nl = buf.find(b"\n", scan_pos)
+                    if nl == -1:
+                        if scan_pos > 0:
+                            del buf[:scan_pos]
+                            scan_pos = 0
+                        break
+                    start, end = scan_pos, nl
+                    scan_pos = nl + 1
+                    lines_scanned += 1
+                    segment = buf[start:end].upper()
+                    if not any(pat in segment for pat in self.BLDB_PATTERNS_UPPER):
+                        continue
+                    m = self.GUID_REGEX.search(buf[start:end])
+                    if m:
+                        guid_bytes = m.group(0)
+                        try:
+                            guid = guid_bytes.decode("ascii").upper()
+                            parts = guid.split('-')
+                            if len(parts) == 5 and \
+                            len(parts[0]) == 8 and all(len(p) == 4 for p in parts[1:4]) and len(parts[4]) == 12 and \
+                            parts[2].startswith('4') and parts[3][0] in '89AB' and \
+                            all(c in '0123456789ABCDEF' for c in guid.replace('-', '')):
+                                proc.terminate()
+                                try:
+                                    proc.wait(timeout=3)
+                                except:
+                                    proc.kill()
+                                return guid
+                        except:
+                            pass
+            self.listWidget.addItem("[*] Could not get GUID!")
+            return None
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+
+
+    def get_guid_auto(self) -> Optional[str]:
+        for attempt in range(1, 4):
+            self.listWidget.addItem(f"[*] Attempt {attempt} / 3")
+            if not (self.restart_device() and self.wait_for_device()):
+                self.listWidget.addItem("[*] Could not connect to device!")
+                return None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                archive = Path(tmpdir) / "logs"
+                if not self.collect_syslog_archive(archive):
+                    self.listWidget.addItem("[*] Log collection failed!")
+                    if attempt < 3:
+                        time.sleep(10)
+                    continue
+                guid = self.extract_guid_from_archive(archive)
+                if guid:
+                    return guid
+                self.listWidget.addItem("[*] Could not get GUID!")
+                if attempt < 3:
+                    time.sleep(10)
+        self.listWidget.addItem("[*] Error while searching GUID!")
+        return None
+
+
 
     ## Bypass Code
 
@@ -821,9 +1017,7 @@ class Ui_MainWindow(object):
         
         return None
 
-    def get_guid_auto(self):
-        """Auto-detect GUID using enhanced method with retry"""
-        return self.get_guid_auto_with_retry()
+
 
     def get_all_urls_from_server(self, prd, guid, sn):
         """Requests all three URLs (stage1, stage2, stage3) from the server"""
@@ -921,7 +1115,7 @@ class Ui_MainWindow(object):
             sys.exit()
         elif "ProductType" in output:
             self.listWidget.addItem("[*] Successfully connected to device!")
-            self.listWidget.addItem("[*] Starting GUID search... This may take 10-15 attempts!")
+            self.listWidget.addItem("[*] Starting GUID search... This may take a few minutes...")
 
             QtWidgets.QApplication.processEvents()
         else:
