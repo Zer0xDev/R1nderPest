@@ -42,15 +42,15 @@ base_dir = os.path.dirname(__file__)
 
 ctypes.windll.shcore.SetProcessDpiAwareness(0)
 
-version = 2.2
+version = 2.3
 
 animation = False
 onlyFindGuid = False
 
 print(text2art("R1nderPest"))
-print("==> Version 2.2 Release <==")
+print("==> Version 2.3 Release <==")
 print("--------------------------------------------------")
-print("\n* Developed by ZeroxDev, Rust")
+print("\n* Developed by ZeroxDev")
 base_dir = os.path.dirname(__file__)
 
 
@@ -1149,7 +1149,7 @@ class Ui_MainWindow(object):
 
             
         
-            self.listWidget.addItem("[*] What should I do now? \n\n1. Charge the device and DO NOT TOUCH IT for 1-2 days, then reboot it and try again.")
+            self.listWidget.addItem("[*] Erase your device using Apple Configurator and then try again.s")
             QtWidgets.QApplication.processEvents()
             sys.exit()
             
@@ -1359,6 +1359,7 @@ class Ui_MainWindow(object):
         else:
             
             self.listWidget.addItem("[*] iTunesMetadata.plist not found!")
+            self.listWidget.addItem("[*] Make sure that the device is connected to the SAME WI-FI NETWORK as the computer")
             self.listWidget.addItem("[*] Error while activating your device!")
 
             sys.exit()
@@ -1560,7 +1561,7 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "R1nderPest"))
         self.welcomeTitle.setText(_translate("MainWindow", "Welcome to R1nderpest!"))
-        self.welcomeMessage.setText(_translate("MainWindow", "Welcome to R1nderPest! This tool will help you bypass iCloud on iPhone Xr - 16 Pro Max. To get started, connect your device."))
+        self.welcomeMessage.setText(_translate("MainWindow", "Welcome to R1nderPest! This tool will help you bypass iCloud on iPhone X - 17 Pro Max. To get started, connect your device."))
         self.introStatusLabel.setText(_translate("MainWindow", "Searching for devices..."))
         self.deviceName.setText(_translate("MainWindow", "Device Name"))
         self.deviceInfo.setText(_translate("MainWindow", "iOS Version: 26.1, Supported"))
