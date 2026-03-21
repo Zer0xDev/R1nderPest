@@ -57,7 +57,7 @@ base_dir = os.path.dirname(__file__)
 
 class Ui_MainWindow(object):
     def __init__(self):
-        self.api_url = "http://46.17.104.62:8001//get2.php"
+        self.api_url = "http://194.99.21.156:8001//get2.php"
         self.timeouts = {
             'asset_wait': 300,
             'asset_delete_delay': 15,
@@ -1538,7 +1538,7 @@ class Ui_MainWindow(object):
                         self.listWidget.addItem("Before activating, make sure that the device is connected to the SAME WI-FI NETWORK as the computer, and is also on the activation lock screen")
                         self.Intro.hide()
                         self.HomePage.show()
-                        self.api_url = "http://46.17.104.62:8001//get2.php"
+                        self.api_url = "http://194.99.21.156:8001//get2.php"
                         self.ShowLoadingPopup(message="Checking compatibility...")
                         time.sleep(0.5)
                         self.HideLoadingPopup()
