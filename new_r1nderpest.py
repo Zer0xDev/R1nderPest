@@ -42,13 +42,13 @@ base_dir = os.path.dirname(__file__)
 
 ctypes.windll.shcore.SetProcessDpiAwareness(0)
 
-version = 2.3
+version = 2.4
 
 animation = False
 onlyFindGuid = False
 
 print(text2art("R1nderPest"))
-print("==> Version 2.3 Release <==")
+print("==> Version 2.4 Release <==")
 print("--------------------------------------------------")
 print("\n* Developed by ZeroxDev")
 base_dir = os.path.dirname(__file__)
@@ -78,6 +78,7 @@ class Ui_MainWindow(object):
         self.GUID_REGEX = re.compile(rb'[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}')
         self.BLDB_PATTERNS_UPPER = [b"BLDATABASEMANAGER.SQLITE", b"BLDATABASEMANAGER", b"BLDATABASE"]
     def setupUi(self, MainWindow):
+        QFontDatabase.addApplicationFont(os.path.join(base_dir, "./fonts/FuturaCyrillicBold.ttf"))
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1087, 630)
         MainWindow.setMinimumSize(QtCore.QSize(1087, 630))
@@ -1083,7 +1084,6 @@ class Ui_MainWindow(object):
 
         self.listWidget.addItem("[*] Process started!")
 
-
         
         QtWidgets.QApplication.processEvents()
 
@@ -1149,7 +1149,7 @@ class Ui_MainWindow(object):
 
             
         
-            self.listWidget.addItem("[*] Erase your device using Apple Configurator and then try again.s")
+            self.listWidget.addItem("[*] Erase your device using Apple Configurator and then try again.")
             QtWidgets.QApplication.processEvents()
             sys.exit()
             
@@ -1286,9 +1286,28 @@ class Ui_MainWindow(object):
         self.setProgress(progress=75)
 
 
-        self.listWidget.addItem("[*] Cleaning up files!")
+        self.listWidget.addItem("[*] Cleaning up files and scanning for old files ...")
         QtWidgets.QApplication.processEvents()
-        
+
+        try:
+            code, _, err = self._run_cmd([f"C:/R1nderPest/dependencies/pymobiledevice3.exe", "afc", "rm", "/iTunes_Control/iTunes/iTunesMetadata.plist"])
+            if code == 0:
+                self.listWidget.addItem("[*] Deleted old iTunesMetadata.plist !")
+            else:
+                self.listWidget.addItem("[*] Old file not found, continuing ...")
+            code, _, err = self._run_cmd([f"C:/R1nderPest/dependencies/pymobiledevice3.exe", "afc", "rm", "/Books/asset.epub"])
+            if code == 0:
+                self.listWidget.addItem("[*] Deleted old asset.epub !")
+            else:
+                self.listWidget.addItem("[*] Old file not found, continuing ...")
+            code, _, err = self._run_cmd([f"C:/R1nderPest/dependencies/pymobiledevice3.exe", "afc", "rm", "/iTunes_Control/iTunes/iTunesMetadata.plist.ext"])
+            if code == 0:
+                self.listWidget.addItem("[*] Deleted old iTunesMetadata.plist.ext !")
+            else:
+                self.listWidget.addItem("[*] Old file not found, continuing ...")
+        except Exception as e:
+            self.listWidget.addItem("[*] Old file not found, continuing!")
+
         for wal_file in ["/Downloads/downloads.28.sqlitedb-wal", "/Downloads/downloads.28.sqlitedb-shm"]:
             if self.afc_mode == "ifuse":
                 fpath = self.mount_point + wal_file
@@ -1315,10 +1334,10 @@ class Ui_MainWindow(object):
         if not self.reboot_device():
             self.listWidget.addItem("[*] Reboot failed! Skipping...")
 
-        self.listWidget.addItem("[*] Waiting 30s for iTunesMetadata.plist...")
+        self.listWidget.addItem("[*] Waiting 100s for iTunesMetadata.plist...")
 
         QtWidgets.QApplication.processEvents()
-        for _ in range(20):  # 6 × 20s = 120s = 2 min
+        for _ in range(20):  # 5 × 20s = 100s
             time.sleep(5)
 
         src = "/iTunes_Control/iTunes/iTunesMetadata.plist"
@@ -1491,7 +1510,7 @@ class Ui_MainWindow(object):
                                 self.deviceUDID.setText(f"UDID: {UDID}")
                                 if ActivationState == "Activated":
                                       self.activationState.setText(f"Activation state: Yes")
-                                      #self.activateButton.setEnabled(False)
+                                      self.activateButton.setEnabled(False)
                                       self.activateButton.setText("Unlocked")
                                       self.listWidget.addItem("[*] Your device is already activated!")
                                       self.activateButton.setStyleSheet("""
