@@ -15,5 +15,5 @@ Free and Open-Source A12+ Activator
 
 # Other...
 
-### Our telegram channel: https://t.me/+7GpwjBs5wjw1ZmIy
+### Our telegram channel: https://t.me/+NANUJ6-dB_U0NDli
 ### Support (help with bypass or if your device is not supported): https://t.me/zeroxxDEV
