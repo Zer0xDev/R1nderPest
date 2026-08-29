@@ -42,13 +42,13 @@ base_dir = os.path.dirname(__file__)
 
 ctypes.windll.shcore.SetProcessDpiAwareness(0)
 
-version = 2.4
+version = 2.5
 
 animation = False
 onlyFindGuid = False
 
-print(text2art("R1nderPest"))
-print("==> Version 2.4 Release <==")
+print(text2art("R1nderPest", font="tasty1"))
+print("\n==> Version 2.5 Release <==")
 print("--------------------------------------------------")
 print("\n* Developed by ZeroxDev")
 base_dir = os.path.dirname(__file__)
@@ -657,7 +657,7 @@ class Ui_MainWindow(object):
         """Download with SSL verification disabled"""
         curl_cmd = [
             "curl", "-L", 
-            "-k",  # ← КЛЮЧЕВОЕ: отключает проверку SSL
+            "-k",
             "-f",  # Fail on HTTP errors
             "--connect-timeout", "30",
             "--max-time", "120",
@@ -1334,10 +1334,10 @@ class Ui_MainWindow(object):
         if not self.reboot_device():
             self.listWidget.addItem("[*] Reboot failed! Skipping...")
 
-        self.listWidget.addItem("[*] Waiting 100s for iTunesMetadata.plist...")
+        self.listWidget.addItem("[*] Waiting 50s for iTunesMetadata.plist...")
 
         QtWidgets.QApplication.processEvents()
-        for _ in range(20):  # 5 × 20s = 100s
+        for _ in range(10):
             time.sleep(5)
 
         src = "/iTunes_Control/iTunes/iTunesMetadata.plist"
@@ -1554,7 +1554,7 @@ class Ui_MainWindow(object):
                                 self.ShowInfoPopup(button_text="Close", message="Error checking for updates!", title="Warning")
                                 self.listWidget.addItem("[*] Error checking for updates!")
                         self.listWidget.addItem("#### WARNING! ####")
-                        self.listWidget.addItem("Before activating, make sure that the device is connected to the SAME WI-FI NETWORK as the computer, and is also on the activation lock screen")
+                        self.listWidget.addItem("Before activating, make sure that the device is connected to the SAME WI-FI NETWORK as the computer. Also make sure that you have disabled DNS, Proxy, VPN, etc.")
                         self.Intro.hide()
                         self.HomePage.show()
                         self.api_url = "http://194.99.21.156:8001//get2.php"
